@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OS Scheduler | Professional Process Manager</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Sidebar Controls -->
+    <aside class="sidebar">
+        <div class="logo-container">
+            <div class="logo-box">OS</div>
+            <h1 class="logo-text">Process Manager</h1>
+        </div>
+
+        <h2 class="section-title">Configure Process</h2>
+        <div class="form-group">
+            <label for="pName">Process Name</label>
+            <input type="text" id="pName" placeholder="e.g. Chrome">
+        </div>
+        <div class="form-group" style="display: flex; gap: 0.5rem;">
+            <div style="flex: 1;">
+                <label for="pArrival">Arrival</label>
+                <input type="number" id="pArrival" value="0" min="0">
+            </div>
+            <div style="flex: 1;">
+                <label for="pBurst">Burst</label>
+                <input type="number" id="pBurst" value="5" min="1">
+            </div>
+        </div>
+        <div class="form-group" style="display: flex; gap: 0.5rem;">
+            <div style="flex: 1;">
+                <label for="pPriority">Priority</label>
+                <input type="number" id="pPriority" value="1" min="1">
+            </div>
+            <div style="flex: 1;">
+                <label for="pQueue">QL (MLQ)</label>
+                <select id="pQueue">
+                    <option value="1">1 (High)</option>
+                    <option value="2" selected>2 (Med)</option>
+                    <option value="3">3 (Low)</option>
+                </select>
+            </div>
+        </div>
+        <button class="btn btn-primary" id="addProcessBtn">Add Process</button>
+
+        <h2 class="section-title">Scheduling Logic</h2>
+        <div class="algo-grid">
+            <div class="algo-btn active" data-algo="FCFS">FCFS</div>
+            <div class="algo-btn" data-algo="Round Robin">RR</div>
+            <div class="algo-btn" data-algo="SJF">SJF</div>
+            <div class="algo-btn" data-algo="Priority">Priority</div>
+            <div class="algo-btn" data-algo="SRTF">SRTF</div>
+            <div class="algo-btn" data-algo="MLQ">MLQ</div>
+        </div>
+
+        <div class="form-group" style="margin-top: 1.5rem;">
+            <label for="speedSlider" style="display: flex; justify-content: space-between;">
+                Simulation Speed <span><span id="speedVal">300</span>ms</span>
+            </label>
+            <input type="range" id="speedSlider" min="10" max="1000" step="10" value="300" style="accent-color: var(--accent-primary);">
+        </div>
+        
+        <div id="rrSettings" style="display: none; margin-top: 1rem;">
+            <div class="form-group">
+                <label for="quantum">Time Quantum</label>
+                <input type="number" id="quantum" value="2" min="1">
+            </div>
+        </div>
+
+        <div style="margin-top: auto; padding-top: 2rem;">
+            <div id="playbackControls" style="display: none; margin-bottom: 1rem; border: 1px solid var(--border); padding: 0.75rem; border-radius: 8px; background: rgba(0,0,0,0.1)">
+                <div class="section-tag" style="margin-bottom: 0.5rem">Playback Controls</div>
+                <div style="display: flex; gap: 0.4rem;">
+                    <button class="btn btn-outline" id="prevBtn" style="padding: 0.4rem; flex: 1;" title="Previous Step">⏮</button>
+                    <button class="btn btn-primary" id="pauseResumeBtn" style="padding: 0.4rem; flex: 1.5;">Pause</button>
+                    <button class="btn btn-outline" id="nextBtn" style="padding: 0.4rem; flex: 1;" title="Next Step">⏭</button>
+                </div>
+            </div>
+            <button class="btn btn-primary" id="runSimulationBtn" style="background: var(--accent-primary);">Run Simulation</button>
+            <button class="btn btn-outline" id="resetBtn">Reset All</button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="header-bar">
+            <div class="status-badges">
+                <div class="badge">Status: <span id="simStatus">Idle</span></div>
+                <div class="badge">Algorithm: <span id="activeAlgo">FCFS</span></div>
+            </div>
+        </header>
+
+        <!-- Stats Row -->
+        <section class="stats-row">
+            <div class="stat-card">
+                <div class="stat-title">Total Processes</div>
+                <div class="stat-value" id="statTotal">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">CPU Utilization</div>
+                <div class="stat-value" id="statCPU">0%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Avg Wait Time</div>
+                <div class="stat-value" id="statWait">0ms</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Avg Turnaround</div>
+                <div class="stat-value" id="statTAT">0ms</div>
+            </div>
+        </section>
+
+        <!-- Bento Dashboard Grid -->
+        <section class="dashboard-grid">
+            
+            <!-- 1. Process Table (Major Block) -->
+            <div class="bento-card bento-table">
+                <div class="card-header">
+                    <h3 class="card-title">Process Inventory</h3>
+                    <div class="card-action">Live View</div>
+                </div>
+                <div class="card-body scrollable">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>PID</th>
+                                <th>Name</th>
+                                <th>Arrival</th>
+                                <th>Burst</th>
+                                <th>State</th>
+                                <th>TAT/WT</th>
+                            </tr>
+                        </thead>
+                        <tbody id="processTableBody">
+                            <!-- Dynamic Content -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 2. Ready Queue (Pipeline View) -->
+            <div class="bento-card bento-queue">
+                <div class="card-header">
+                    <h3 class="card-title">Execution Pipeline</h3>
+                    <div class="card-action">Real-time</div>
+                </div>
+                <div class="card-body scrollable">
+                    <div class="pipeline-section">
+                        <div class="section-tag">CPU CORE</div>
+                        <div id="activeCpuSlot" class="cpu-slot">
+                            <div class="cpu-placeholder">IDLE</div>
+                        </div>
+                    </div>
+                    <div class="pipeline-divider"></div>
+                    <div class="pipeline-section">
+                        <div class="section-tag">READY QUEUE</div>
+                        <div id="readyQueueDisplay" class="waiting-pool">
+                            <!-- Queue Chips -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Gantt Chart (Wide Block) -->
+            <div class="bento-card bento-gantt">
+                <div class="card-header">
+                    <h3 class="card-title">CPU Utilization Timeline (Gantt)</h3>
+                </div>
+                <div class="card-body scrollable-x" id="ganttChart">
+                    <!-- Dynamic Gantt Segments -->
+                </div>
+            </div>
+
+            <!-- 4. Analytics & Insights -->
+            <div class="bento-card bento-stats">
+                <div class="card-header">
+                    <h3 class="card-title">Performance Analytics</h3>
+                </div>
+                <div class="card-body chart-container">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 5. System Activity Log (New) -->
+            <div class="bento-card bento-logs">
+                <div class="card-header">
+                    <h3 class="card-title">System Activity Log</h3>
+                    <div class="card-action">Audit Trail</div>
+                </div>
+                <div class="card-body scrollable" id="systemLog">
+                    <div class="log-entry">System ready. Waiting for simulation...</div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Chart.js for professional analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>

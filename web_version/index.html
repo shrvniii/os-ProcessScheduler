@@ -10,8 +10,8 @@
     <!-- Sidebar Controls -->
     <aside class="sidebar">
         <div class="logo-container">
-            <div class="logo-box">OS</div>
-            <h1 class="logo-text">Process Manager</h1>
+            <div class="logo-box pulse-heartbeat">OS</div>
+            <h1 class="logo-text">Kernel Console <span style="font-size:0.5rem; vertical-align:top; color:var(--accent-primary)">v2.4</span></h1>
         </div>
 
         <h2 class="section-title">Configure Process</h2>
@@ -50,12 +50,13 @@
             <div class="algo-btn active" data-algo="FCFS">FCFS</div>
             <div class="algo-btn" data-algo="Round Robin">RR</div>
             <div class="algo-btn" data-algo="SJF">SJF</div>
+            <div class="algo-btn" data-algo="SRTN">SRTN</div>
             <div class="algo-btn" data-algo="Priority">Priority</div>
-            <div class="algo-btn" data-algo="SRTF">SRTF</div>
+            <div class="algo-btn" data-algo="Priority_P">Pri-P</div>
             <div class="algo-btn" data-algo="MLQ">MLQ</div>
         </div>
 
-        <div class="form-group" style="margin-top: 1.5rem;">
+        <div class="form-group" style="margin-top: 1rem;">
             <label for="speedSlider" style="display: flex; justify-content: space-between;">
                 Simulation Speed <span><span id="speedVal">300</span>ms</span>
             </label>
@@ -65,139 +66,165 @@
         <div id="rrSettings" style="display: none; margin-top: 1rem;">
             <div class="form-group">
                 <label for="quantum">Time Quantum</label>
-                <input type="number" id="quantum" value="2" min="1">
+                <input type="number" id="quantum" value="3" min="1">
             </div>
         </div>
 
         <div style="margin-top: auto; padding-top: 2rem;">
             <div id="playbackControls" style="display: none; margin-bottom: 1rem; border: 1px solid var(--border); padding: 0.75rem; border-radius: 8px; background: rgba(0,0,0,0.1)">
-                <div class="section-tag" style="margin-bottom: 0.5rem">Playback Controls</div>
                 <div style="display: flex; gap: 0.4rem;">
-                    <button class="btn btn-outline" id="prevBtn" style="padding: 0.4rem; flex: 1;" title="Previous Step">⏮</button>
-                    <button class="btn btn-primary" id="pauseResumeBtn" style="padding: 0.4rem; flex: 1.5;">Pause</button>
-                    <button class="btn btn-outline" id="nextBtn" style="padding: 0.4rem; flex: 1;" title="Next Step">⏭</button>
+                    <button class="btn btn-outline" id="prevBtn" title="Previous Step">⏮</button>
+                    <button class="btn btn-primary" id="pauseResumeBtn" style="flex: 1.5;">Pause</button>
+                    <button class="btn btn-outline" id="nextBtn" title="Next Step">⏭</button>
                 </div>
             </div>
-            <button class="btn btn-primary" id="runSimulationBtn" style="background: var(--accent-primary);">Run Simulation</button>
+            <button class="btn btn-primary" id="runSimulationBtn">Run Simulation</button>
             <button class="btn btn-outline" id="resetBtn">Reset All</button>
+            <button class="btn btn-outline" id="compareAlgosBtn" style="margin-top: 0.5rem; border-color: var(--accent-secondary); color: var(--accent-secondary);">Compare All</button>
         </div>
     </aside>
 
     <!-- Main Content -->
     <main class="main-content">
         <header class="header-bar">
+            <div class="view-tabs">
+                <button class="tab-btn active" data-view="dashboard">Dashboard</button>
+                <button class="tab-btn" data-view="analytics">Comparison Lab</button>
+            </div>
             <div class="status-badges">
                 <div class="badge">Status: <span id="simStatus">Idle</span></div>
-                <div class="badge">Algorithm: <span id="activeAlgo">FCFS</span></div>
+                <div class="badge">Algo: <span id="activeAlgo">FCFS</span></div>
+                <div class="badge">Clock: <span id="simTimeDisplay">0</span>ms</div>
             </div>
         </header>
 
-        <!-- Stats Row -->
-        <section class="stats-row">
-            <div class="stat-card">
-                <div class="stat-title">Total Processes</div>
-                <div class="stat-value" id="statTotal">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-title">CPU Utilization</div>
-                <div class="stat-value" id="statCPU">0%</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-title">Avg Wait Time</div>
-                <div class="stat-value" id="statWait">0ms</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-title">Avg Turnaround</div>
-                <div class="stat-value" id="statTAT">0ms</div>
-            </div>
-        </section>
+        <!-- View Containers -->
+        <div id="dashboardView" class="view-panel active">
+            <section class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-title">Throughput</div>
+                    <div class="stat-value" id="statTotal">0/0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">CPU Utilization</div>
+                    <div class="stat-value" id="statCPU">0%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Avg Wait Time</div>
+                    <div class="stat-value" id="statWait">0.0ms</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Avg Turnaround</div>
+                    <div class="stat-value" id="statTAT">0.0ms</div>
+                </div>
+            </section>
 
-        <!-- Bento Dashboard Grid -->
-        <section class="dashboard-grid">
-            
-            <!-- 1. Process Table (Major Block) -->
-            <div class="bento-card bento-table">
-                <div class="card-header">
-                    <h3 class="card-title">Process Inventory</h3>
-                    <div class="card-action">Live View</div>
-                </div>
-                <div class="card-body scrollable">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>PID</th>
-                                <th>Name</th>
-                                <th>Arrival</th>
-                                <th>Burst</th>
-                                <th>State</th>
-                                <th>TAT/WT</th>
-                            </tr>
-                        </thead>
-                        <tbody id="processTableBody">
-                            <!-- Dynamic Content -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- 2. Ready Queue (Pipeline View) -->
-            <div class="bento-card bento-queue">
-                <div class="card-header">
-                    <h3 class="card-title">Execution Pipeline</h3>
-                    <div class="card-action">Real-time</div>
-                </div>
-                <div class="card-body scrollable">
-                    <div class="pipeline-section">
-                        <div class="section-tag">CPU CORE</div>
-                        <div id="activeCpuSlot" class="cpu-slot">
-                            <div class="cpu-placeholder">IDLE</div>
-                        </div>
+            <section class="dashboard-grid">
+                <!-- 1. Process Inventory -->
+                <div class="bento-card bento-table" style="grid-column: span 1.8;">
+                    <div class="card-header">
+                        <h3 class="card-title">Process Inventory</h3>
                     </div>
-                    <div class="pipeline-divider"></div>
-                    <div class="pipeline-section">
-                        <div class="section-tag">READY QUEUE</div>
-                        <div id="readyQueueDisplay" class="waiting-pool">
-                            <!-- Queue Chips -->
+                    <div class="card-body" style="padding: 0; overflow: hidden;">
+                        <div style="max-height: 290px; overflow-y: auto;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>PID</th>
+                                        <th>Name</th>
+                                        <th>Arr</th>
+                                        <th>Burst</th>
+                                        <th style="width: 80px;">State</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="processTableBody"></tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- 3. Gantt Chart (Wide Block) -->
-            <div class="bento-card bento-gantt">
-                <div class="card-header">
-                    <h3 class="card-title">CPU Utilization Timeline (Gantt)</h3>
+                <!-- 2. System Topology -->
+                <div class="bento-card" style="grid-column: span 1.2; min-height: 350px;">
+                    <div class="card-header">
+                        <h3 class="card-title">Hardware Topology</h3>
+                    </div>
+                    <div class="card-body" style="display: flex; align-items: center; justify-content: center; padding: 0;">
+                        <div class="cabinet-grid">
+                            <div class="state-node-box" id="node-NEW">NEW</div>
+                            <div class="cabinet-link hor" id="path-NEW-READY"></div>
+                            <div class="state-node-box" id="node-READY">READY</div>
+                            
+                            <div class="cabinet-link ver" style="grid-row: 2; grid-column: 3;" id="path-READY-RUNNING"></div>
+                            <div class="cabinet-link diag" id="path-PREEMPT"></div>
+                            
+                            <div class="state-node-box" id="node-TERMINATED" style="grid-row: 3; grid-column: 1;">EXIT</div>
+                            <div class="cabinet-link hor" style="grid-row: 3; grid-column: 2;" id="path-RUNNING-TERMINATED"></div>
+                            <div class="state-node-box" id="node-RUNNING" style="grid-row: 3; grid-column: 3;">RUN</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body scrollable-x" id="ganttChart">
-                    <!-- Dynamic Gantt Segments -->
-                </div>
-            </div>
 
-            <!-- 4. Analytics & Insights -->
-            <div class="bento-card bento-stats">
-                <div class="card-header">
-                    <h3 class="card-title">Performance Analytics</h3>
+                <div class="bento-card bento-queue" style="grid-column: span 3; min-height: 200px;">
+                    <div class="card-header"><h3 class="card-title">Hardware Execution Pipeline</h3></div>
+                    <div class="card-body">
+                        <div class="horizontal-pipeline">
+                            <div class="pipeline-stage">
+                                <div class="stage-label">READY QUEUE</div>
+                                <div id="readyQueueDisplay" class="waiting-pool-horizontal"></div>
+                            </div>
+                            <div class="pipeline-connector">
+                                <div class="connector-arrow">▶</div>
+                            </div>
+                            <div class="pipeline-stage" style="width: 250px; flex-shrink: 0;">
+                                <div class="stage-label" id="preemptFlash">CPU CORE</div>
+                                <div id="activeCpuSlot" class="cpu-slot-mini">
+                                    <div class="cpu-placeholder">IDLE</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body chart-container">
-                    <canvas id="performanceChart"></canvas>
-                </div>
-            </div>
 
-            <!-- 5. System Activity Log (New) -->
-            <div class="bento-card bento-logs">
-                <div class="card-header">
-                    <h3 class="card-title">System Activity Log</h3>
-                    <div class="card-action">Audit Trail</div>
+                <div class="bento-card bento-gantt">
+                    <div class="card-header"><h3 class="card-title">Timeline Visualizer (Gantt)</h3></div>
+                    <div class="card-body" style="overflow-x:auto;">
+                        <div id="ganttChart">
+                            <div class="gantt-live-container" id="ganttLiveRow"></div>
+                            <div class="gantt-time-row" id="ganttTimeRow"></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body scrollable" id="systemLog">
-                    <div class="log-entry">System ready. Waiting for simulation...</div>
-                </div>
-            </div>
 
-        </section>
+                <div class="bento-card bento-stats">
+                    <div class="card-header"><h3 class="card-title">Perf Chart</h3></div>
+                    <div class="card-body" style="height:250px">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="bento-card bento-logs">
+                    <div class="card-header"><h3 class="card-title">System Log</h3></div>
+                    <div class="card-body" id="systemLog" style="overflow-y:auto; height:250px;">
+                        <div class="log-entry">System ready.</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div id="analyticsView" class="view-panel">
+            <section class="comparison-container">
+                <div class="bento-card" style="padding:1.5rem">
+                    <div class="card-header"><h3 class="card-title">Performance Comparison Lab</h3></div>
+                    <div id="comparisonResults">
+                        <div class="empty-state">Select "Compare All" to generate hardware benchmark data.</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Lifecycle View Integrated into Dashboard -->
     </main>
 
-    <!-- Chart.js for professional analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="main.js"></script>
 </body>

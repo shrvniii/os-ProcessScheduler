@@ -1,0 +1,2609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OS Process Manager Simulator</title>
+<style>
+  :root {
+    --bg: #f5f5dc;
+    --bg2: #ffffff;
+    --bg3: #f0f0f0;
+    --bg4: #e8e8e8;
+    --border: #cccccc;
+    --border2: #aaaaaa;
+    --text: #000000;
+    --text2: #555555;
+    --text3: #777777;
+    --accent: #d2b48c;
+    --accent2: #a0522d;
+    --green: #00e676;
+    --green2: #00b347;
+    --yellow: #ffd740;
+    --yellow2: #cc9900;
+    --red: #ff4d6d;
+    --red2: #cc2244;
+    --purple: #bb86fc;
+    --orange: #ff9800;
+    --idle: #cccccc;
+    --shadow: 0 8px 32px rgba(0,0,0,0.1);
+    --glow: 0 0 20px rgba(210,180,140,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Times New Roman', serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    box-shadow: 0 0 16px rgba(0,212,255,0.4);
+  }
+
+  .logo-text {
+    font-family: 'Times New Roman', serif;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--text);
+  }
+
+  .logo-sub {
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 1px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  .clock {
+    color: var(--accent);
+    font-size: 12px;
+  }
+
+  .badge {
+    background: var(--bg4);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 10px;
+    color: var(--text2);
+  }
+
+  /* ── TABS ── */
+  .tabs {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex;
+    gap: 0;
+  }
+
+  .tab {
+    padding: 12px 20px;
+    font-size: 11px;
+    font-family: 'Times New Roman', serif;
+    letter-spacing: 0.08em;
+    color: var(--text3);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    user-select: none;
+  }
+
+  .tab:hover { color: var(--text2); }
+
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* ── MAIN ── */
+  .main { padding: 20px 24px; max-width: 1600px; margin: 0 auto; }
+
+  .panel-view { display: none; }
+  .panel-view.active { display: block; }
+
+  /* ── GRID ── */
+  .grid-top {
+    display: grid;
+    grid-template-columns: 320px 1fr 320px;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  @media (max-width: 1200px) {
+    .grid-top { grid-template-columns: 1fr 1fr; }
+    .grid-top > :nth-child(3) { grid-column: 1/-1; }
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg3);
+  }
+
+  .card-title {
+    font-family: 'Times New Roman', serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text2);
+  }
+
+  .card-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  .card-dot.green { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .card-dot.yellow { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+  .card-dot.purple { background: var(--purple); box-shadow: 0 0 8px var(--purple); }
+  .card-dot.red { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  .card-dot.orange { background: var(--orange); box-shadow: 0 0 8px var(--orange); }
+
+  .card-body { padding: 16px; }
+
+  /* ── FORM ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+
+  label {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+
+  input[type="number"], input[type="text"], select {
+    background: var(--bg4);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-family: 'Times New Roman', serif;
+    font-size: 13px;
+    color: var(--text);
+    width: 100%;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0,212,255,0.12);
+  }
+
+  select option { background: var(--bg4); }
+
+  /* ── BUTTONS ── */
+  .btn {
+    padding: 9px 16px;
+    border-radius: 6px;
+    font-family: 'Times New Roman', serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: none;
+    transition: all 0.18s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  .btn-primary:hover {
+    background: #33ddff;
+    box-shadow: 0 0 16px rgba(0,212,255,0.35);
+  }
+
+  .btn-success {
+    background: var(--green);
+    color: var(--bg);
+  }
+
+  .btn-success:hover {
+    background: #33ff88;
+    box-shadow: 0 0 16px rgba(0,230,118,0.35);
+  }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--red);
+    border: 1px solid var(--red);
+  }
+
+  .btn-danger:hover {
+    background: rgba(255,77,109,0.1);
+    box-shadow: 0 0 12px rgba(255,77,109,0.2);
+  }
+
+  .btn-ghost {
+    background: var(--bg4);
+    color: var(--text2);
+    border: 1px solid var(--border2);
+  }
+
+  .btn-ghost:hover {
+    background: var(--bg3);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn-warning {
+    background: var(--yellow);
+    color: var(--bg);
+  }
+
+  .btn-warning:hover {
+    background: #ffe066;
+    box-shadow: 0 0 16px rgba(255,215,64,0.35);
+  }
+
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    box-shadow: none !important;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+
+  /* ── QUANTUM INPUT ── */
+  .quantum-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    padding: 10px;
+    background: var(--bg4);
+    border-radius: 6px;
+    border: 1px solid var(--border2);
+    display: none;
+  }
+
+  .quantum-row label { margin: 0; white-space: nowrap; }
+  .quantum-row input { width: 80px; }
+
+  /* ── READY QUEUE TABLE ── */
+  .table-wrap {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 280px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  thead th {
+    position: sticky; top: 0;
+    background: var(--bg3);
+    padding: 9px 12px;
+    text-align: left;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  tbody tr:hover { background: rgba(255,255,255,0.025); }
+
+  tbody td {
+    padding: 9px 12px;
+    color: var(--text2);
+    white-space: nowrap;
+  }
+
+  .pid-cell {
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .status-ready    { background: rgba(0,230,118,0.12); color: var(--green); border: 1px solid rgba(0,230,118,0.25); }
+  .status-running  { background: rgba(0,212,255,0.12); color: var(--accent); border: 1px solid rgba(0,212,255,0.25); }
+  .status-waiting  { background: rgba(255,215,64,0.12); color: var(--yellow); border: 1px solid rgba(255,215,64,0.25); }
+  .status-terminated { background: rgba(90,100,114,0.2); color: var(--text3); border: 1px solid rgba(90,100,114,0.3); }
+  .status-new      { background: rgba(187,134,252,0.12); color: var(--purple); border: 1px solid rgba(187,134,252,0.25); }
+
+  .color-dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+    box-shadow: 0 0 6px currentColor;
+  }
+
+  .empty-state {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text3);
+    font-size: 12px;
+  }
+
+  .empty-icon { font-size: 28px; margin-bottom: 8px; }
+
+  /* ── ALGO PANEL ── */
+  .algo-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .algo-card {
+    padding: 12px;
+    background: var(--bg4);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.18s;
+    user-select: none;
+  }
+
+  .algo-card:hover { border-color: var(--accent); }
+
+  .algo-card.selected {
+    border-color: var(--accent);
+    background: rgba(0,212,255,0.07);
+    box-shadow: 0 0 14px rgba(0,212,255,0.1);
+  }
+
+  .algo-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 3px;
+  }
+
+  .algo-desc {
+    font-size: 10px;
+    color: var(--text3);
+    line-height: 1.4;
+  }
+
+  .algo-tag {
+    display: inline-block;
+    margin-top: 5px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .tag-np { background: rgba(0,230,118,0.12); color: var(--green); }
+  .tag-p  { background: rgba(0,212,255,0.12); color: var(--accent); }
+
+  /* ── GANTT ── */
+  #gantt-wrap {
+    overflow-x: auto;
+    overflow-y: hidden;
+    min-height: 110px;
+    padding: 16px;
+    padding-bottom: 0;
+  }
+
+  #gantt-canvas {
+    display: block;
+    min-height: 90px;
+  }
+
+  .gantt-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 90px;
+    color: var(--text3);
+    font-size: 12px;
+    gap: 8px;
+  }
+
+  /* ── METRICS TABLE ── */
+  .metrics-table-wrap {
+    overflow-x: auto;
+  }
+
+  .metrics-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .metrics-table thead th {
+    background: var(--bg3);
+  }
+
+  .metrics-table tbody td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+  }
+
+  .metrics-table tfoot td {
+    padding: 9px 12px;
+    background: var(--bg3);
+    border-top: 1px solid var(--border2);
+    font-weight: 600;
+    color: var(--text);
+    font-size: 11px;
+  }
+
+  .best-val { color: var(--green); font-weight: 700; }
+
+  /* ── STAT CARDS ── */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .stat-card.blue::before  { background: var(--accent); }
+  .stat-card.green::before { background: var(--green); }
+  .stat-card.yellow::before{ background: var(--yellow); }
+  .stat-card.purple::before{ background: var(--purple); }
+
+  .stat-label {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-family: 'Times New Roman', serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-sub { font-size: 11px; color: var(--text3); }
+
+  /* ── COMPARE VIEW ── */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .compare-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .compare-header {
+    padding: 12px 16px;
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .compare-title {
+    font-family: 'Times New Roman', serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .compare-meta {
+    font-size: 10px;
+    color: var(--text3);
+  }
+
+  .bar-chart {
+    padding: 16px;
+  }
+
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .bar-label { font-size: 11px; color: var(--text2); min-width: 130px; }
+
+  .bar-track {
+    flex: 1;
+    background: var(--bg4);
+    border-radius: 3px;
+    height: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.6s cubic-bezier(.4,0,.2,1);
+    display: flex;
+    align-items: center;
+    padding-right: 6px;
+    justify-content: flex-end;
+  }
+
+  .bar-val { font-size: 10px; font-weight: 600; color: var(--bg); white-space: nowrap; }
+
+  /* ── LIFECYCLE VIEW ── */
+  .lifecycle-container {
+    padding: 20px;
+  }
+
+  .state-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: wrap;
+    padding: 20px 0;
+  }
+
+  .state-node {
+    padding: 14px 20px;
+    border-radius: 10px;
+    border: 2px solid;
+    text-align: center;
+    min-width: 110px;
+    position: relative;
+  }
+
+  .state-node .state-name {
+    font-family: 'Times New Roman', serif;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .state-node .state-desc {
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    margin-top: 3px;
+    opacity: 0.7;
+  }
+
+  .state-new       { border-color: var(--purple); color: var(--purple); background: rgba(187,134,252,0.07); }
+  .state-ready     { border-color: var(--green);  color: var(--green);  background: rgba(0,230,118,0.07); }
+  .state-running   { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.07); }
+  .state-waiting   { border-color: var(--yellow); color: var(--yellow); background: rgba(255,215,64,0.07); }
+  .state-terminated{ border-color: var(--red);    color: var(--red);    background: rgba(255,77,109,0.07); }
+
+  .state-arrow {
+    font-size: 18px;
+    color: var(--text3);
+    margin: 0 8px;
+    flex-shrink: 0;
+  }
+
+  /* ── LIVE SIMULATION ── */
+  .live-proc-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 90px;
+    padding: 6px 10px;
+    background: var(--bg4);
+    border-radius: 6px;
+    border: 1px solid var(--border2);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .live-proc-bar.state-running {
+    border-color: var(--accent);
+    box-shadow: 0 0 12px rgba(0,212,255,0.25);
+  }
+
+  .live-proc-bar.state-ready {
+    border-color: var(--green2);
+  }
+
+  .live-proc-bar.state-terminated {
+    opacity: 0.4;
+    border-color: var(--border);
+  }
+
+  .live-proc-bar.state-preempted {
+    border-color: var(--red) !important;
+    box-shadow: 0 0 14px rgba(255,77,109,0.4) !important;
+    animation: preempt-flash 0.4s ease;
+  }
+
+  @keyframes preempt-flash {
+    0%   { background: rgba(255,77,109,0.25); }
+    100% { background: var(--bg4); }
+  }
+
+  .live-proc-name { font-size: 11px; font-weight: 700; }
+
+  .live-proc-remaining {
+    font-size: 9px;
+    color: var(--text3);
+  }
+
+  .live-progress-track {
+    height: 4px;
+    background: var(--bg3);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .live-progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.12s linear;
+  }
+
+  .gantt-live-block {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 38px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--bg);
+    cursor: default;
+    position: relative;
+    flex-shrink: 0;
+    transition: filter 0.15s;
+  }
+
+  .gantt-live-block:last-child {
+    animation: block-grow 0.08s ease-out;
+  }
+
+  @keyframes block-grow {
+    from { opacity: 0.5; transform: scaleX(0.8); transform-origin: left; }
+    to   { opacity: 1;   transform: scaleX(1); }
+  }
+
+  .gantt-live-block.idle-block {
+    background: var(--idle);
+    color: var(--text3);
+    font-size: 9px;
+  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent2); }
+
+  /* ── ALERTS ── */
+  .alert {
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .alert-error   { background: rgba(255,77,109,0.1); border: 1px solid rgba(255,77,109,0.3); color: var(--red); }
+  .alert-success { background: rgba(0,230,118,0.1); border: 1px solid rgba(0,230,118,0.3); color: var(--green); }
+  .alert-info    { background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.3); color: var(--accent); }
+
+  #alert-box { min-height: 0; transition: all 0.2s; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 12px 18px;
+    font-size: 12px;
+    color: var(--text);
+    z-index: 9999;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(.4,0,.2,1);
+    max-width: 320px;
+    box-shadow: var(--shadow);
+  }
+
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* ── PROCESS LIFECYCLE ANIMATION ── */
+  .process-lifecycle {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .lifecycle-state {
+    background: var(--bg4);
+    border-radius: 8px;
+    border: 1px solid var(--border2);
+    padding: 12px;
+    min-height: 80px;
+  }
+
+  .lifecycle-state-title {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  .process-chip {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    margin: 2px;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn { from { opacity:0; transform: scale(0.8); } to { opacity:1; transform: scale(1); } }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+
+  .chip-running { animation: pulse 1s ease infinite; }
+
+  /* ── ABOUT ── */
+
+  /* ── NO-RESULT ── */
+  .no-result {
+    text-align: center;
+    padding: 30px;
+    color: var(--text3);
+    font-size: 12px;
+  }
+
+  /* ── SCROLLABLE GANTT ── */
+  .gantt-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: max-content;
+    padding: 12px 16px 20px;
+  }
+
+  .gantt-row {
+    display: flex;
+    height: 34px;
+    align-items: stretch;
+  }
+
+  .gantt-pid-label {
+    width: 40px;
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    color: var(--text2);
+  }
+
+  .gantt-blocks {
+    display: flex;
+    align-items: stretch;
+    position: relative;
+  }
+
+  .gantt-block {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 4px;
+    margin: 0 1px;
+    color: var(--bg);
+    cursor: pointer;
+    transition: filter 0.15s;
+    position: relative;
+  }
+
+  .gantt-block:hover { filter: brightness(1.2); }
+
+  .gantt-block-idle {
+    background: var(--idle);
+    color: var(--text3);
+  }
+
+  .gantt-time-axis {
+    display: flex;
+    margin-left: 40px;
+    margin-top: 4px;
+    min-width: max-content;
+  }
+
+  .time-marker {
+    font-size: 9px;
+    color: var(--text3);
+    text-align: left;
+    position: absolute;
+    transform: translateX(-50%);
+  }
+
+  .time-axis-container {
+    position: relative;
+    height: 16px;
+    margin-left: 41px;
+    min-width: max-content;
+  }
+
+  /* ── EXPORT BTN ── */
+  .export-section {
+    display: flex;
+    gap: 10px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--bg3);
+  }
+
+  /* ── TOOLTIP ── */
+  [data-tip] { position: relative; }
+  [data-tip]:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg4);
+    border: 1px solid var(--border2);
+    padding: 4px 8px;
+    font-size: 10px;
+    white-space: nowrap;
+    border-radius: 4px;
+    color: var(--text2);
+    z-index: 99;
+    margin-bottom: 4px;
+  }
+
+  /* ── REMOVE BTN in table ── */
+  .btn-tiny {
+    padding: 2px 6px;
+    font-size: 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    background: transparent;
+    border: 1px solid rgba(255,77,109,0.3);
+    color: var(--red);
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+
+  .btn-tiny:hover { background: rgba(255,77,109,0.15); }
+
+  /* ── COMPARISON TABLE ── */
+  .comparison-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .cmp-item {
+    background: var(--bg4);
+    border-radius: 8px;
+    border: 1px solid var(--border2);
+    padding: 12px;
+  }
+
+  .cmp-algo {
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .cmp-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    padding: 3px 0;
+    color: var(--text2);
+  }
+
+  .cmp-row .val { color: var(--text); font-weight: 600; }
+
+  .best-algo {
+    border-color: var(--green);
+    box-shadow: 0 0 12px rgba(0,230,118,0.1);
+  }
+
+  .best-algo .cmp-algo { color: var(--green); }
+
+  .cmp-item {
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .cmp-item:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  }
+
+  #compare-content {
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+
+  #compare-content.active {
+    opacity: 1;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-text">OS PROCESS SIMULATOR</div>
+  </div>
+</header>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('simulator')">▷ Simulator</div>
+  <div class="tab" onclick="switchTab('compare')">⧉ Algorithm Compare</div>
+  <div class="tab" onclick="switchTab('lifecycle')">◎ Process Lifecycle</div>
+
+</div>
+
+<div class="main">
+
+  <!-- ══════════════════════ SIMULATOR TAB ══════════════════════ -->
+  <div id="tab-simulator" class="panel-view active">
+
+    <div class="stat-grid" id="stats-bar">
+      <div class="stat-card blue">
+        <div class="stat-label">Total Processes</div>
+        <div class="stat-value" id="stat-total">0</div>
+        <div class="stat-sub">in queue</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Avg Waiting Time</div>
+        <div class="stat-value" id="stat-awt">—</div>
+        <div class="stat-sub">units</div>
+      </div>
+      <div class="stat-card yellow">
+        <div class="stat-label">Avg Turnaround</div>
+        <div class="stat-value" id="stat-att">—</div>
+        <div class="stat-sub">units</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-label">Context Switches</div>
+        <div class="stat-value" id="stat-cs">—</div>
+        <div class="stat-sub">this run</div>
+      </div>
+    </div>
+
+    <div class="grid-top">
+
+      <!-- Process Creation Form -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot green"></div>
+          <div class="card-title">Create Process</div>
+        </div>
+        <div class="card-body">
+          <div id="alert-box"></div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Process ID</label>
+              <input type="number" id="inp-pid" placeholder="e.g. 1" min="1">
+            </div>
+            <div class="form-group">
+              <label>Arrival Time</label>
+              <input type="number" id="inp-arrival" placeholder="e.g. 0" min="0">
+            </div>
+            <div class="form-group">
+              <label>Burst Time</label>
+              <input type="number" id="inp-burst" placeholder="e.g. 5" min="1">
+            </div>
+            <div class="form-group">
+              <label>Priority</label>
+              <input type="number" id="inp-priority" placeholder="1=highest" min="1">
+            </div>
+            <div class="form-group">
+              <label>Scheduling Algorithm</label>
+              <select id="inp-algo" onchange="selectAlgo(this.value)">
+                <option value="FCFS" selected>FCFS</option>
+                <option value="SJF">SJF</option>
+                <option value="SRTN">SRTN</option>
+                <option value="PRIORITY">Priority NP</option>
+                <option value="PRIORITY_P">Priority P</option>
+                <option value="RR">Round Robin</option>
+              </select>
+            </div>
+            <div class="form-group" id="quantum-row" style="display:none">
+              <label>Time Quantum</label>
+              <input type="number" id="inp-quantum" value="3" min="1" max="99" style="width:70px">
+              <span style="font-size:10px;color:var(--text3)">units</span>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-success" onclick="addProcess()">＋ Add Process</button>
+            <button class="btn btn-primary" id="btn-run" onclick="startLive()">▶ Run Live</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ready Queue Table -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot"></div>
+          <div class="card-title">Ready Queue</div>
+          <span style="margin-left:auto;font-size:10px;color:var(--text3)" id="queue-count">0 processes</span>
+        </div>
+        <div class="table-wrap" id="queue-table-wrap">
+          <div class="empty-state" id="queue-empty">
+            <div class="empty-icon">📋</div>
+            <div>No processes in queue.<br>Add a process to get started.</div>
+          </div>
+          <table id="queue-table" style="display:none">
+            <thead>
+              <tr>
+                <th>PID</th>
+                <th>Arrival</th>
+                <th>Burst</th>
+                <th>Remaining</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="queue-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CPU Status -->
+      <div class="card" id="live-cpu-card">
+        <div class="card-header">
+          <div class="card-dot" id="cpu-dot"></div>
+          <div class="card-title">CPU Status</div>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:16px">
+            <span style="font-size:11px;color:var(--text3)">Clock: <span id="live-clock" style="color:var(--accent);font-weight:700">—</span></span>
+            <span style="font-size:11px;color:var(--text3)">Running: <span id="live-running" style="font-weight:700">—</span></span>
+            <span style="font-size:11px;color:var(--text3)">Queue: <span id="live-qsize" style="color:var(--yellow);font-weight:700">—</span></span>
+            <span id="preempt-flash" style="font-size:10px;color:var(--red);font-weight:700;opacity:0;transition:opacity 0.15s">⚡ PREEMPTED</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Mini live process bars -->
+          <div id="live-process-bars" style="padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px"></div>
+          <div style="margin-top:12px;padding:10px;background:var(--bg4);border-radius:6px;border:1px solid var(--border2)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <label style="font-size:10px;color:var(--text3);white-space:nowrap">Speed</label>
+              <input type="range" id="sim-speed" min="1" max="10" value="5" style="flex:1;accent-color:var(--accent)">
+              <span id="sim-speed-label" style="font-size:10px;color:var(--accent);min-width:32px">5×</span>
+            </div>
+            <div style="font-size:9px;color:var(--text3);text-align:center">1× = slow  ·  10× = fast</div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-ghost" id="btn-pause" onclick="togglePause()" style="display:none">⏸ Pause</button>
+            <button class="btn btn-ghost" id="btn-step" onclick="stepOnce()" style="display:none">⏭ Step</button>
+            <button class="btn btn-danger" onclick="resetAll()">⟳ Reset</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gantt Chart -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header">
+        <div class="card-dot orange"></div>
+        <div class="card-title">Gantt Chart</div>
+        <span style="margin-left:auto;font-size:10px;color:var(--text3)" id="gantt-algo-label">No run yet</span>
+      </div>
+      <div id="gantt-wrap">
+        <div class="gantt-empty" id="gantt-empty">
+          <span>📊</span>
+          <span>Run the scheduler to see the Gantt chart</span>
+        </div>
+        <div id="gantt-content" style="display:none;overflow-x:auto;padding:16px 16px 20px">
+          <!-- live gantt rows built here -->
+          <div id="gantt-live-row" style="display:flex;align-items:stretch;min-width:max-content;height:38px;gap:1px"></div>
+          <div id="gantt-time-row" style="position:relative;height:18px;margin-top:3px;min-width:max-content"></div>
+          <!-- live cursor line -->
+          <div id="gantt-cursor" style="position:absolute;top:0;bottom:0;width:2px;background:var(--red);opacity:0.7;pointer-events:none;display:none"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Performance Metrics -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-dot purple"></div>
+        <div class="card-title">Performance Metrics</div>
+      </div>
+      <div id="metrics-empty" class="empty-state" style="padding:24px">
+        <div class="empty-icon">📈</div>
+        <div>Metrics will appear after running the scheduler.</div>
+      </div>
+      <div id="metrics-content" style="display:none">
+        <div class="metrics-table-wrap">
+          <table class="metrics-table">
+            <thead>
+              <tr>
+                <th>PID</th>
+                <th>Arrival</th>
+                <th>Burst</th>
+                <th>Completion</th>
+                <th>Waiting</th>
+                <th>Turnaround</th>
+                <th>Response</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="metrics-tbody"></tbody>
+            <tfoot>
+              <tr id="metrics-avg-row">
+                <td colspan="4">Averages</td>
+                <td id="avg-wt">—</td>
+                <td id="avg-tat">—</td>
+                <td id="avg-rt">—</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div class="export-section">
+          <button class="btn btn-ghost" onclick="exportCSV()">⬇ Export CSV</button>
+          <button class="btn btn-ghost" onclick="exportJSON()">⬇ Export JSON</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end simulator tab -->
+
+  <!-- ══════════════════════ COMPARE TAB ══════════════════════ -->
+  <div id="tab-compare" class="panel-view">
+    <div style="padding:0 0 16px;display:flex;align-items:center;gap:12px">
+      <div style="font-family:'Times New Roman',serif;font-size:18px;font-weight:700">Algorithm Comparison</div>
+      <span style="font-size:11px;color:var(--text3)">Run all 4 algorithms on the current process set</span>
+      <button class="btn btn-primary" style="margin-left:auto" onclick="runComparison()">▶ Run All Algorithms</button>
+      <button class="btn btn-ghost" onclick="loadSample(); showToast('Sample processes loaded!')">↺ Load Sample</button>
+    </div>
+
+    <div id="compare-empty" class="card" style="margin-bottom:16px">
+      <div class="empty-state" style="padding:40px">
+        <div class="empty-icon">⧉</div>
+        <div>Add processes in the Simulator tab, then click "Run All Algorithms" to compare.</div>
+      </div>
+    </div>
+
+    <div id="compare-content" style="display:none">
+      <div class="comparison-summary" id="compare-summary"></div>
+
+      <div class="compare-grid" id="compare-gantt-grid" style="margin-bottom:16px"></div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot green"></div>
+          <div class="card-title">Metric Comparison Chart</div>
+        </div>
+        <div id="compare-chart-wrap" style="padding:16px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ LIFECYCLE TAB ══════════════════════ -->
+  <div id="tab-lifecycle" class="panel-view">
+    <div style="padding:0 0 16px;display:flex;align-items:center;gap:12px">
+      <div style="font-family:'Times New Roman',serif;font-size:18px;font-weight:700">Process Lifecycle Visualizer</div>
+      <button class="btn btn-ghost" onclick="loadSample(); renderLifecycle();" style="margin-left:auto">↺ Load Sample</button>
+      <button class="btn btn-primary" onclick="renderLifecycle()">▶ Animate Lifecycle</button>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header">
+        <div class="card-dot purple"></div>
+        <div class="card-title">State Transition Diagram</div>
+      </div>
+      <div class="lifecycle-container">
+        <div class="state-diagram">
+          <div class="state-node state-new"><div class="state-name">NEW</div><div class="state-desc">Process created</div></div>
+          <div class="state-arrow">→</div>
+          <div class="state-node state-ready"><div class="state-name">READY</div><div class="state-desc">In queue</div></div>
+          <div class="state-arrow">⇌</div>
+          <div class="state-node state-running"><div class="state-name">RUNNING</div><div class="state-desc">On CPU</div></div>
+          <div class="state-arrow">→</div>
+          <div class="state-node state-terminated"><div class="state-name">TERMINATED</div><div class="state-desc">Finished</div></div>
+        </div>
+        <div style="display:flex;justify-content:center;gap:32px;margin-top:-10px;margin-bottom:10px">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text3)">
+            <span>↓ I/O request</span>
+            <div class="state-node state-waiting" style="min-width:90px;padding:10px 14px"><div class="state-name">WAITING</div><div class="state-desc">I/O or event</div></div>
+            <span>↑ I/O complete</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-dot"></div>
+        <div class="card-title">Live Process State Board</div>
+        <span style="margin-left:auto;font-size:10px;color:var(--text3)">Based on last scheduler run</span>
+      </div>
+      <div id="lifecycle-board">
+        <div class="process-lifecycle">
+          <div class="lifecycle-state" id="lc-new">
+            <div class="lifecycle-state-title" style="color:var(--purple)">⬢ New</div>
+            <div id="lc-new-procs"></div>
+          </div>
+          <div class="lifecycle-state" id="lc-ready">
+            <div class="lifecycle-state-title" style="color:var(--green)">⬢ Ready</div>
+            <div id="lc-ready-procs"></div>
+          </div>
+          <div class="lifecycle-state" id="lc-running">
+            <div class="lifecycle-state-title" style="color:var(--accent)">⬢ Running</div>
+            <div id="lc-running-procs"></div>
+          </div>
+          <div class="lifecycle-state" id="lc-waiting">
+            <div class="lifecycle-state-title" style="color:var(--yellow)">⬢ Waiting</div>
+            <div id="lc-waiting-procs"></div>
+          </div>
+          <div class="lifecycle-state" id="lc-terminated">
+            <div class="lifecycle-state-title" style="color:var(--red)">⬢ Terminated</div>
+            <div id="lc-term-procs"></div>
+          </div>
+        </div>
+        <div style="padding:0 16px 16px;display:flex;align-items:center;gap:10px">
+          <span id="lc-step-label" style="font-size:11px;color:var(--text3)">Click "Animate Lifecycle" to replay.</span>
+          <div id="lc-progress" style="flex:1;height:3px;background:var(--bg4);border-radius:2px;display:none">
+            <div id="lc-progress-fill" style="height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width 0.3s"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Background Concept Table -->
+    <div class="card" style="margin-top:16px">
+      <div class="card-header">
+        <div class="card-dot yellow"></div>
+        <div class="card-title">Process States — Reference</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>State</th><th>Description</th><th>Transition From</th><th>Transition To</th></tr></thead>
+          <tbody>
+            <tr><td><span class="status-badge status-new">New</span></td><td style="color:var(--text)">PCB initialized, resources allocated</td><td>—</td><td>Ready</td></tr>
+            <tr><td><span class="status-badge status-ready">Ready</span></td><td style="color:var(--text)">Loaded in memory, awaiting CPU</td><td>New, Running (preempted), Waiting</td><td>Running</td></tr>
+            <tr><td><span class="status-badge status-running">Running</span></td><td style="color:var(--text)">Dispatched to CPU, instructions executing</td><td>Ready</td><td>Waiting, Ready (preempted), Terminated</td></tr>
+            <tr><td><span class="status-badge status-waiting">Waiting</span></td><td style="color:var(--text)">Awaiting I/O completion or event</td><td>Running</td><td>Ready</td></tr>
+            <tr><td><span class="status-badge status-terminated">Terminated</span></td><td style="color:var(--text)">Execution complete, resources reclaimed</td><td>Running</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end .main -->
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+let processes = [];
+let lastResult = null;
+let selectedAlgo = 'FCFS';
+let lifecycleTimer = null;
+
+// ── LIVE SIM STATE ──
+let simSteps     = [];   // pre-computed tick-by-tick steps [{pid, isIdle, snapshot[]}]
+let simIndex     = 0;
+let simTimer     = null;
+let simPaused    = false;
+let simRunning   = false;
+let ganttBlocks  = [];   // accumulated {pid, start, end, color} merged blocks
+let UNIT         = 28;   // px per time unit in gantt
+
+const PROCESS_COLORS = [
+  '#00d4ff','#00e676','#ffd740','#ff4d6d','#bb86fc','#ff9800',
+  '#18ffff','#69ff47','#ff6d00','#d500f9','#ff1744','#00e5ff',
+  '#76ff03','#ffea00','#f50057','#651fff'
+];
+
+let colorIndex = 0;
+
+// ═══════════════════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════════════════
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const tabs = ['simulator','compare','lifecycle'];
+    t.classList.toggle('active', tabs[i] === name);
+  });
+  document.querySelectorAll('.panel-view').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ALGO SELECT
+// ═══════════════════════════════════════════════════════════
+function selectAlgo(algo) {
+  selectedAlgo = algo;
+  document.getElementById('quantum-row').style.display = algo === 'RR' ? 'flex' : 'none';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ALERT / TOAST
+// ═══════════════════════════════════════════════════════════
+function showAlert(msg, type='error') {
+  const box = document.getElementById('alert-box');
+  box.innerHTML = `<div class="alert alert-${type}"><span>${type==='error'?'✖':type==='success'?'✔':'ℹ'}</span>${msg}</div>`;
+  setTimeout(() => box.innerHTML = '', 3000);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ADD PROCESS
+// ═══════════════════════════════════════════════════════════
+function addProcess() {
+  const pid      = parseInt(document.getElementById('inp-pid').value);
+  const arrival  = parseInt(document.getElementById('inp-arrival').value);
+  const burst    = parseInt(document.getElementById('inp-burst').value);
+  const priority = parseInt(document.getElementById('inp-priority').value);
+
+  if (isNaN(pid) || pid <= 0)           return showAlert('Process ID must be a positive integer.');
+  if (processes.find(p => p.pid === pid)) return showAlert(`Process P${pid} already exists.`);
+  if (isNaN(arrival) || arrival < 0)    return showAlert('Arrival Time must be ≥ 0.');
+  if (isNaN(burst) || burst < 1)        return showAlert('Burst Time must be ≥ 1.');
+  if (isNaN(priority) || priority < 1)  return showAlert('Priority must be ≥ 1.');
+
+  const p = {
+    pid, arrival, burst,
+    remaining: burst,
+    priority,
+    status: 'Ready',
+    color: PROCESS_COLORS[colorIndex % PROCESS_COLORS.length],
+    completionTime: null,
+    waitingTime: null,
+    turnaroundTime: null,
+    responseTime: null,
+    firstCPUTime: null
+  };
+  colorIndex++;
+  processes.push(p);
+
+  // clear inputs
+  ['inp-pid','inp-arrival','inp-burst','inp-priority'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('inp-pid').focus();
+
+  renderQueue();
+  updateStats();
+  showAlert(`Process P${pid} added to ready queue.`, 'success');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SAMPLE DATA
+// ═══════════════════════════════════════════════════════════
+function loadSample() {
+  processes = [];
+  colorIndex = 0;
+  const sample = [
+    {pid:1, arrival:0, burst:6, priority:2},
+    {pid:2, arrival:1, burst:4, priority:1},
+    {pid:3, arrival:2, burst:8, priority:3},
+    {pid:4, arrival:3, burst:2, priority:4},
+  ];
+  sample.forEach(s => {
+    processes.push({
+      ...s,
+      remaining: s.burst,
+      status: 'Ready',
+      color: PROCESS_COLORS[colorIndex % PROCESS_COLORS.length],
+      completionTime:null,waitingTime:null,turnaroundTime:null,responseTime:null,firstCPUTime:null
+    });
+    colorIndex++;
+  });
+  renderQueue();
+  updateStats();
+  resetLive();
+  // clear results
+  document.getElementById('gantt-empty').style.display = 'flex';
+  document.getElementById('gantt-content').style.display = 'none';
+  document.getElementById('metrics-empty').style.display = 'block';
+  document.getElementById('metrics-content').style.display = 'none';
+  document.getElementById('gantt-algo-label').textContent = 'No run yet';
+  document.getElementById('live-cpu-card').style.display = 'none';
+  document.getElementById('btn-run').style.display = 'inline-flex';
+  document.getElementById('btn-run').textContent = '▶ Run Live';
+  document.getElementById('btn-pause').style.display = 'none';
+  document.getElementById('btn-step').style.display = 'none';
+  resetStats();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER QUEUE
+// ═══════════════════════════════════════════════════════════
+function renderQueue() {
+  const tbody = document.getElementById('queue-tbody');
+  const empty = document.getElementById('queue-empty');
+  const table = document.getElementById('queue-table');
+  const count = document.getElementById('queue-count');
+
+  count.textContent = processes.length + ' process' + (processes.length !== 1 ? 'es' : '');
+
+  if (processes.length === 0) {
+    empty.style.display = 'block';
+    table.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  table.style.display = 'table';
+
+  tbody.innerHTML = processes.map(p => `
+    <tr>
+      <td class="pid-cell">
+        <span class="color-dot" style="background:${p.color}"></span>P${p.pid}
+      </td>
+      <td>${p.arrival}</td>
+      <td>${p.burst}</td>
+      <td>${p.remaining}</td>
+      <td>${p.priority}</td>
+      <td><span class="status-badge status-${p.status.toLowerCase()}">${p.status}</span></td>
+      <td><button class="btn-tiny" onclick="removeProcess(${p.pid})">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+function removeProcess(pid) {
+  processes = processes.filter(p => p.pid !== pid);
+  renderQueue();
+  updateStats();
+}
+
+function updateStats() {
+  document.getElementById('stat-total').textContent = processes.length;
+}
+
+function resetStats() {
+  document.getElementById('stat-awt').textContent = '—';
+  document.getElementById('stat-att').textContent = '—';
+  document.getElementById('stat-cs').textContent = '—';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DEEP CLONE processes
+// ═══════════════════════════════════════════════════════════
+function cloneProcesses() {
+  return processes.map(p => ({ ...p, remaining: p.burst,
+    completionTime:null,waitingTime:null,turnaroundTime:null,responseTime:null,firstCPUTime:null }));
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SCHEDULING ALGORITHMS
+// ═══════════════════════════════════════════════════════════
+
+function scheduleFCFS(procs) {
+  const list = [...procs].sort((a,b) => a.arrival - b.arrival || a.pid - b.pid);
+  let time = 0;
+  const gantt = [];
+  let cs = 0;
+  let lastPid = null;
+
+  for (const p of list) {
+    if (time < p.arrival) {
+      gantt.push({pid:'IDLE', start:time, end:p.arrival, color:null});
+      time = p.arrival;
+    }
+    if (p.firstCPUTime === null) p.firstCPUTime = time;
+    if (lastPid !== null && lastPid !== 'IDLE') cs++;
+    gantt.push({pid:p.pid, start:time, end:time+p.burst, color:p.color});
+    time += p.burst;
+    p.completionTime = time;
+    p.turnaroundTime = p.completionTime - p.arrival;
+    p.waitingTime    = p.turnaroundTime - p.burst;
+    p.responseTime   = p.firstCPUTime - p.arrival;
+    p.remaining = 0;
+    p.status = 'Terminated';
+    lastPid = p.pid;
+  }
+  return { procs: list, gantt, contextSwitches: cs };
+}
+
+function scheduleSJF(procs) {
+  const list = procs.map(p => ({...p}));
+  let time = 0;
+  const gantt = [];
+  let done = [];
+  let cs = 0;
+  let lastPid = null;
+  let remaining = [...list];
+
+  while (remaining.length > 0 || done.length < list.length) {
+    const available = remaining.filter(p => p.arrival <= time);
+    if (available.length === 0) {
+      const next = remaining.reduce((a,b) => a.arrival < b.arrival ? a : b);
+      gantt.push({pid:'IDLE', start:time, end:next.arrival, color:null});
+      time = next.arrival;
+      continue;
+    }
+    available.sort((a,b) => a.burst - b.burst || a.arrival - b.arrival);
+    const p = available[0];
+    remaining = remaining.filter(x => x.pid !== p.pid);
+    if (p.firstCPUTime === null) p.firstCPUTime = time;
+    if (lastPid !== null && lastPid !== 'IDLE') cs++;
+    gantt.push({pid:p.pid, start:time, end:time+p.burst, color:p.color});
+    time += p.burst;
+    p.completionTime = time;
+    p.turnaroundTime = p.completionTime - p.arrival;
+    p.waitingTime    = p.turnaroundTime - p.burst;
+    p.responseTime   = p.firstCPUTime - p.arrival;
+    p.remaining = 0;
+    p.status = 'Terminated';
+    lastPid = p.pid;
+    done.push(p);
+    if (done.length === list.length) break;
+  }
+  return { procs: done, gantt, contextSwitches: cs };
+}
+
+function schedulePriority(procs) {
+  const list = procs.map(p => ({...p}));
+  let time = 0;
+  const gantt = [];
+  let done = [];
+  let cs = 0;
+  let lastPid = null;
+  let remaining = [...list];
+
+  while (remaining.length > 0) {
+    const available = remaining.filter(p => p.arrival <= time);
+    if (available.length === 0) {
+      const next = remaining.reduce((a,b) => a.arrival < b.arrival ? a : b);
+      gantt.push({pid:'IDLE', start:time, end:next.arrival, color:null});
+      time = next.arrival;
+      continue;
+    }
+    available.sort((a,b) => a.priority - b.priority || a.arrival - b.arrival);
+    const p = available[0];
+    remaining = remaining.filter(x => x.pid !== p.pid);
+    if (p.firstCPUTime === null) p.firstCPUTime = time;
+    if (lastPid !== null && lastPid !== 'IDLE') cs++;
+    gantt.push({pid:p.pid, start:time, end:time+p.burst, color:p.color});
+    time += p.burst;
+    p.completionTime = time;
+    p.turnaroundTime = p.completionTime - p.arrival;
+    p.waitingTime    = p.turnaroundTime - p.burst;
+    p.responseTime   = p.firstCPUTime - p.arrival;
+    p.remaining = 0;
+    p.status = 'Terminated';
+    lastPid = p.pid;
+    done.push(p);
+  }
+  return { procs: done, gantt, contextSwitches: cs };
+}
+
+function scheduleSRTN(procs) {
+  // Shortest Remaining Time Next — preemptive SJF
+  const list = procs.map(p => ({...p, remaining: p.burst}));
+  let time = 0;
+  const gantt = [];
+  let done = [];
+  let lastPid = null;
+  let cs = 0;
+
+  const totalBurst = list.reduce((s,p) => s + p.burst, 0);
+  const maxTime = Math.max(...list.map(p => p.arrival)) + totalBurst + 1;
+
+  while (done.length < list.length && time <= maxTime) {
+    const available = list.filter(p => p.arrival <= time && p.remaining > 0);
+    if (available.length === 0) {
+      // find next arrival
+      const next = list.filter(p => p.remaining > 0).reduce((a,b) => a.arrival < b.arrival ? a : b, null);
+      if (!next) break;
+      if (gantt.length && gantt[gantt.length-1].pid === 'IDLE') {
+        gantt[gantt.length-1].end = next.arrival;
+      } else {
+        gantt.push({pid:'IDLE', start:time, end:next.arrival, color:null});
+      }
+      time = next.arrival;
+      continue;
+    }
+
+    // pick shortest remaining
+    available.sort((a,b) => a.remaining - b.remaining || a.arrival - b.arrival);
+    const p = available[0];
+
+    if (p.firstCPUTime === null) p.firstCPUTime = time;
+    if (lastPid !== null && lastPid !== p.pid && lastPid !== 'IDLE') cs++;
+
+    // run for 1 unit (preemptive — check every unit)
+    if (gantt.length && gantt[gantt.length-1].pid === p.pid) {
+      gantt[gantt.length-1].end = time + 1;
+    } else {
+      gantt.push({pid:p.pid, start:time, end:time+1, color:p.color});
+    }
+
+    lastPid = p.pid;
+    p.remaining--;
+    time++;
+
+    if (p.remaining === 0) {
+      p.completionTime = time;
+      p.turnaroundTime = p.completionTime - p.arrival;
+      p.waitingTime    = p.turnaroundTime - p.burst;
+      p.responseTime   = p.firstCPUTime - p.arrival;
+      p.status = 'Terminated';
+      done.push(p);
+    }
+  }
+  return { procs: done, gantt, contextSwitches: cs };
+}
+
+function schedulePriorityPreemptive(procs) {
+  // Preemptive Priority — lower number = higher priority
+  const list = procs.map(p => ({...p, remaining: p.burst}));
+  let time = 0;
+  const gantt = [];
+  let done = [];
+  let lastPid = null;
+  let cs = 0;
+
+  const totalBurst = list.reduce((s,p) => s + p.burst, 0);
+  const maxTime = Math.max(...list.map(p => p.arrival)) + totalBurst + 1;
+
+  while (done.length < list.length && time <= maxTime) {
+    const available = list.filter(p => p.arrival <= time && p.remaining > 0);
+    if (available.length === 0) {
+      const next = list.filter(p => p.remaining > 0).reduce((a,b) => a.arrival < b.arrival ? a : b, null);
+      if (!next) break;
+      if (gantt.length && gantt[gantt.length-1].pid === 'IDLE') {
+        gantt[gantt.length-1].end = next.arrival;
+      } else {
+        gantt.push({pid:'IDLE', start:time, end:next.arrival, color:null});
+      }
+      time = next.arrival;
+      continue;
+    }
+
+    available.sort((a,b) => a.priority - b.priority || a.arrival - b.arrival);
+    const p = available[0];
+
+    if (p.firstCPUTime === null) p.firstCPUTime = time;
+    if (lastPid !== null && lastPid !== p.pid && lastPid !== 'IDLE') cs++;
+
+    if (gantt.length && gantt[gantt.length-1].pid === p.pid) {
+      gantt[gantt.length-1].end = time + 1;
+    } else {
+      gantt.push({pid:p.pid, start:time, end:time+1, color:p.color});
+    }
+
+    lastPid = p.pid;
+    p.remaining--;
+    time++;
+
+    if (p.remaining === 0) {
+      p.completionTime = time;
+      p.turnaroundTime = p.completionTime - p.arrival;
+      p.waitingTime    = p.turnaroundTime - p.burst;
+      p.responseTime   = p.firstCPUTime - p.arrival;
+      p.status = 'Terminated';
+      done.push(p);
+    }
+  }
+  return { procs: done, gantt, contextSwitches: cs };
+}
+
+function scheduleRR(procs, quantum) {
+  const list = procs.map(p => ({...p, remaining: p.burst}));
+  let time = 0;
+  const gantt = [];
+  let cs = 0;
+  let lastPid = null;
+  let queue = [];
+  let remaining = [...list].sort((a,b) => a.arrival - b.arrival);
+  let done = [];
+
+  // add processes arriving at 0
+  while (remaining.length && remaining[0].arrival <= time) {
+    queue.push(remaining.shift());
+  }
+
+  const maxIter = 100000;
+  let iter = 0;
+
+  while ((queue.length > 0 || remaining.length > 0) && iter++ < maxIter) {
+    if (queue.length === 0) {
+      const next = remaining[0];
+      gantt.push({pid:'IDLE', start:time, end:next.arrival, color:null});
+      time = next.arrival;
+      while (remaining.length && remaining[0].arrival <= time) {
+        queue.push(remaining.shift());
+      }
+      continue;
+    }
+
+    const p = queue.shift();
+    if (p.firstCPUTime === null) p.firstCPUTime = time;
+    const exec = Math.min(quantum, p.remaining);
+    if (lastPid !== null && lastPid !== p.pid && lastPid !== 'IDLE') cs++;
+    gantt.push({pid:p.pid, start:time, end:time+exec, color:p.color});
+    time += exec;
+    p.remaining -= exec;
+    lastPid = p.pid;
+
+    // add newly arrived while this ran
+    while (remaining.length && remaining[0].arrival <= time) {
+      queue.push(remaining.shift());
+    }
+
+    if (p.remaining > 0) {
+      queue.push(p);
+    } else {
+      p.completionTime = time;
+      p.turnaroundTime = p.completionTime - p.arrival;
+      p.waitingTime    = p.turnaroundTime - p.burst;
+      p.responseTime   = p.firstCPUTime - p.arrival;
+      p.status = 'Terminated';
+      done.push(p);
+    }
+  }
+  return { procs: done, gantt, contextSwitches: cs };
+}
+
+function runAlgorithm(algo, procs, quantum) {
+  switch(algo) {
+    case 'FCFS':     return scheduleFCFS(procs);
+    case 'SJF':      return scheduleSJF(procs);
+    case 'PRIORITY':   return schedulePriority(procs);
+    case 'PRIORITY_P': return schedulePriorityPreemptive(procs);
+    case 'SRTN':       return scheduleSRTN(procs);
+    case 'RR':         return scheduleRR(procs, quantum);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SPEED SLIDER
+// ═══════════════════════════════════════════════════════════
+document.getElementById('sim-speed').addEventListener('input', function() {
+  document.getElementById('sim-speed-label').textContent = this.value + '×';
+  if (simRunning && !simPaused && simTimer) {
+    clearInterval(simTimer);
+    simTimer = setInterval(simTick, tickDelay());
+  }
+});
+
+function tickDelay() {
+  const spd = parseInt(document.getElementById('sim-speed').value) || 5;
+  // 1× = 600ms, 10× = 30ms
+  return Math.round(600 - (spd - 1) * (570 / 9));
+}
+
+// ═══════════════════════════════════════════════════════════
+//  BUILD TICK STEPS  (unit-by-unit execution plan)
+// ═══════════════════════════════════════════════════════════
+function buildSteps(algo, procs, quantum) {
+  // Returns array of step objects, one per clock tick:
+  // { time, pid, isIdle, isPreemption, snapshot: [{pid,remaining,status,color,burst,priority}] }
+  const list = procs.map(p => ({...p, remaining: p.burst, firstCPU: null, status: 'Ready', done: false}));
+  const steps = [];
+  let time = 0;
+  const totalBurst = list.reduce((s,p) => s + p.burst, 0);
+  const maxT = Math.max(...list.map(p => p.arrival)) + totalBurst + 5;
+
+  // For RR we need a queue structure
+  let rrQueue = [];
+  let rrSorted = [...list].sort((a,b) => a.arrival - b.arrival);
+  let rrQuantumLeft = quantum;
+  let rrCurrentPid = null;
+
+  while (list.some(p => !p.done) && time < maxT) {
+    const arrived = list.filter(p => p.arrival <= time && !p.done);
+
+    let chosen = null;
+    let isPreemption = false;
+
+    if (algo === 'FCFS') {
+      if (arrived.length > 0) {
+        arrived.sort((a,b) => a.arrival - b.arrival || a.pid - b.pid);
+        // pick one that hasn't been started or is currently being run (non-preemptive)
+        const running = steps.length > 0 && !steps[steps.length-1].isIdle
+          ? list.find(p => p.pid === steps[steps.length-1].pid && !p.done) : null;
+        chosen = running || arrived[0];
+      }
+    } else if (algo === 'SJF') {
+      if (arrived.length > 0) {
+        const running = steps.length > 0 && !steps[steps.length-1].isIdle
+          ? list.find(p => p.pid === steps[steps.length-1].pid && !p.done) : null;
+        arrived.sort((a,b) => a.remaining - b.remaining || a.arrival - b.arrival);
+        chosen = running || arrived[0];
+      }
+    } else if (algo === 'SRTN') {
+      if (arrived.length > 0) {
+        arrived.sort((a,b) => a.remaining - b.remaining || a.arrival - b.arrival);
+        const prev = steps.length > 0 && !steps[steps.length-1].isIdle
+          ? steps[steps.length-1].pid : null;
+        chosen = arrived[0];
+        if (prev && prev !== chosen.pid) isPreemption = true;
+      }
+    } else if (algo === 'PRIORITY') {
+      if (arrived.length > 0) {
+        const running = steps.length > 0 && !steps[steps.length-1].isIdle
+          ? list.find(p => p.pid === steps[steps.length-1].pid && !p.done) : null;
+        arrived.sort((a,b) => a.priority - b.priority || a.arrival - b.arrival);
+        chosen = running || arrived[0];
+      }
+    } else if (algo === 'PRIORITY_P') {
+      if (arrived.length > 0) {
+        arrived.sort((a,b) => a.priority - b.priority || a.arrival - b.arrival);
+        const prev = steps.length > 0 && !steps[steps.length-1].isIdle
+          ? steps[steps.length-1].pid : null;
+        chosen = arrived[0];
+        if (prev && prev !== chosen.pid) isPreemption = true;
+      }
+    } else if (algo === 'RR') {
+      // add newly arrived to rrQueue (in arrival order, not yet queued)
+      while (rrSorted.length && rrSorted[0].arrival <= time) {
+        const p = rrSorted.shift();
+        if (!p.done) rrQueue.push(p.pid);
+      }
+      // if current process ran out of quantum or finished, rotate
+      if (rrCurrentPid !== null) {
+        const cur = list.find(p => p.pid === rrCurrentPid);
+        if (cur && cur.done) {
+          rrCurrentPid = null;
+          rrQuantumLeft = quantum;
+        } else if (rrQuantumLeft <= 0) {
+          // preempt — put back at end
+          if (cur && !cur.done) rrQueue.push(rrCurrentPid);
+          rrCurrentPid = null;
+          rrQuantumLeft = quantum;
+          isPreemption = true;
+        }
+      }
+      if (rrCurrentPid === null && rrQueue.length > 0) {
+        rrCurrentPid = rrQueue.shift();
+        const prev = steps.length > 0 && !steps[steps.length-1].isIdle
+          ? steps[steps.length-1].pid : null;
+        if (prev && prev !== rrCurrentPid) isPreemption = true;
+      }
+      if (rrCurrentPid !== null) {
+        const cur = list.find(p => p.pid === rrCurrentPid);
+        if (cur && !cur.done) chosen = cur;
+        else { rrCurrentPid = null; }
+      }
+    }
+
+    if (!chosen) {
+      // IDLE tick
+      steps.push({ time, pid: 'IDLE', isIdle: true, isPreemption: false,
+        snapshot: list.map(p => ({...p})) });
+      time++;
+      continue;
+    }
+
+    if (chosen.firstCPU === null) chosen.firstCPU = time;
+    chosen.remaining--;
+    if (algo === 'RR') rrQuantumLeft--;
+
+    const snap = list.map(p => ({...p}));
+
+    if (chosen.remaining === 0) {
+      chosen.done = true;
+      chosen.status = 'Terminated';
+      chosen.completionTime = time + 1;
+      chosen.turnaroundTime = chosen.completionTime - chosen.arrival;
+      chosen.waitingTime    = chosen.turnaroundTime - chosen.burst;
+      chosen.responseTime   = chosen.firstCPU - chosen.arrival;
+      if (algo === 'RR') { rrCurrentPid = null; rrQuantumLeft = quantum; }
+    } else {
+      chosen.status = 'Running';
+    }
+
+    // mark others as Ready or New
+    list.forEach(p => {
+      if (p.pid !== chosen.pid && !p.done) {
+        p.status = p.arrival <= time ? 'Ready' : 'New';
+      }
+    });
+
+    steps.push({ time, pid: chosen.pid, isIdle: false, isPreemption,
+      color: chosen.color, snapshot: list.map(p => ({...p})) });
+    time++;
+  }
+  return steps;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  START LIVE SIMULATION
+// ═══════════════════════════════════════════════════════════
+function startLive() {
+  if (processes.length === 0) { showAlert('No processes in queue.'); return; }
+  if (simRunning) { resetLive(); }
+
+  const quantum = parseInt(document.getElementById('inp-quantum').value) || 3;
+  const cloned = cloneProcesses();
+  simSteps = buildSteps(selectedAlgo, cloned, quantum);
+  simIndex = 0;
+  ganttBlocks = [];
+  simRunning = true;
+  simPaused = false;
+
+  // Setup UI
+  document.getElementById('gantt-empty').style.display = 'none';
+  document.getElementById('gantt-content').style.display = 'block';
+  document.getElementById('gantt-live-row').innerHTML = '';
+  document.getElementById('gantt-time-row').innerHTML = '';
+  document.getElementById('metrics-empty').style.display = 'block';
+  document.getElementById('metrics-content').style.display = 'none';
+  document.getElementById('gantt-algo-label').textContent =
+    algoLabel(selectedAlgo) + (selectedAlgo === 'RR' ? ` (Q=${quantum})` : '') + ' — Live';
+
+  // Show/hide buttons
+  document.getElementById('btn-run').style.display = 'none';
+  document.getElementById('btn-pause').style.display = 'inline-flex';
+  document.getElementById('btn-step').style.display = 'inline-flex';
+
+  // Build live process bars
+  buildProcessBars();
+
+  document.getElementById('live-cpu-card').style.display = 'block';
+
+  // set UNIT based on total steps
+  UNIT = Math.max(20, Math.min(48, Math.floor(800 / Math.max(simSteps.length, 1))));
+
+  simTimer = setInterval(simTick, tickDelay());
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SIM TICK
+// ═══════════════════════════════════════════════════════════
+function simTick() {
+  if (simIndex >= simSteps.length) {
+    finishSim();
+    return;
+  }
+  const step = simSteps[simIndex];
+  applyStep(step);
+  simIndex++;
+}
+
+function applyStep(step) {
+  const { time, pid, isIdle, isPreemption, color, snapshot } = step;
+
+  // ── Update live clock
+  document.getElementById('live-clock').textContent = time;
+
+  // ── Update running label
+  const runEl = document.getElementById('live-running');
+  if (isIdle) {
+    runEl.textContent = 'IDLE';
+    runEl.style.color = 'var(--text3)';
+    document.getElementById('cpu-dot').className = 'card-dot red';
+  } else {
+    runEl.textContent = `P${pid}`;
+    runEl.style.color = color;
+    document.getElementById('cpu-dot').className = 'card-dot';
+  }
+
+  // ── Queue size
+  const qSize = snapshot.filter(p => p.status === 'Ready').length;
+  document.getElementById('live-qsize').textContent = qSize;
+
+  // ── Preemption flash
+  if (isPreemption) {
+    const flash = document.getElementById('preempt-flash');
+    flash.style.opacity = '1';
+    setTimeout(() => { flash.style.opacity = '0'; }, 600);
+  }
+
+  // ── Update process bars
+  snapshot.forEach(p => updateProcessBar(p, isPreemption && p.pid === pid));
+
+  // ── Update ready queue table live
+  updateQueueLive(snapshot);
+
+  // ── Gantt: merge or add block
+  const liveRow = document.getElementById('gantt-live-row');
+  const lastBlock = ganttBlocks[ganttBlocks.length - 1];
+
+  if (lastBlock && lastBlock.pid === pid) {
+    // extend existing block
+    lastBlock.end = time + 1;
+    const el = liveRow.lastElementChild;
+    if (el) {
+      el.style.width = ((lastBlock.end - lastBlock.start) * UNIT - 2) + 'px';
+      el.title = isIdle ? `IDLE ${lastBlock.start}→${lastBlock.end}`
+                       : `P${pid} ${lastBlock.start}→${lastBlock.end}`;
+    }
+  } else {
+    // new block
+    const block = { pid, start: time, end: time + 1, color: isIdle ? null : color };
+    ganttBlocks.push(block);
+
+    const el = document.createElement('div');
+    el.className = 'gantt-live-block' + (isIdle ? ' idle-block' : '');
+    el.style.width  = (UNIT - 2) + 'px';
+    el.style.background = isIdle ? '' : color;
+    el.style.color  = isIdle ? '' : '#0a0c10';
+    el.textContent  = isIdle ? 'IDLE' : `P${pid}`;
+    el.title        = isIdle ? `IDLE ${time}→${time+1}` : `P${pid} ${time}→${time+1}`;
+    el.id = `gb-${ganttBlocks.length - 1}`;
+    liveRow.appendChild(el);
+
+    // ── Add time marker at start of this block
+    const timeRow = document.getElementById('gantt-time-row');
+    const marker = document.createElement('span');
+    marker.className = 'time-marker';
+    marker.textContent = time;
+    marker.style.left = (ganttBlocks.reduce((s,b,i) => i < ganttBlocks.length-1 ? s+(b.end-b.start)*UNIT : s, 0)) + 'px';
+    timeRow.appendChild(marker);
+  }
+
+  // auto-scroll gantt
+  const gw = document.getElementById('gantt-content');
+  gw.scrollLeft = gw.scrollWidth;
+
+  // ── stat card: live remaining
+  const total = processes.length;
+  const done  = snapshot.filter(p => p.status === 'Terminated').length;
+  document.getElementById('stat-total').textContent = `${done}/${total}`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PROCESS BARS (live remaining display)
+// ═══════════════════════════════════════════════════════════
+function buildProcessBars() {
+  const wrap = document.getElementById('live-process-bars');
+  wrap.innerHTML = processes.map(p => `
+    <div class="live-proc-bar state-ready" id="lpb-${p.pid}">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="live-proc-name" style="color:${p.color}">P${p.pid}</span>
+        <span style="font-size:9px;color:var(--text3)">pr:${p.priority}</span>
+      </div>
+      <div class="live-progress-track">
+        <div class="live-progress-fill" id="lpf-${p.pid}" style="width:100%;background:${p.color}66"></div>
+      </div>
+      <div class="live-proc-remaining" id="lpr-${p.pid}">rem: ${p.burst} / ${p.burst}</div>
+    </div>
+  `).join('');
+}
+
+function updateProcessBar(p, justPreempted) {
+  const bar = document.getElementById(`lpb-${p.pid}`);
+  const fill = document.getElementById(`lpf-${p.pid}`);
+  const rem  = document.getElementById(`lpr-${p.pid}`);
+  if (!bar) return;
+
+  const pct = p.burst > 0 ? (p.remaining / p.burst * 100) : 0;
+
+  // state class
+  bar.className = 'live-proc-bar state-' + p.status.toLowerCase();
+  if (justPreempted) bar.className = 'live-proc-bar state-preempted';
+
+  // fill color: green when running, dimmer otherwise
+  if (p.status === 'Running') {
+    fill.style.background = p.color;
+    fill.style.boxShadow = `0 0 6px ${p.color}`;
+  } else if (p.status === 'Terminated') {
+    fill.style.background = 'var(--text3)';
+    fill.style.boxShadow = 'none';
+  } else {
+    fill.style.background = p.color + '55';
+    fill.style.boxShadow = 'none';
+  }
+  fill.style.width = pct + '%';
+  rem.textContent = p.status === 'Terminated'
+    ? '✔ done'
+    : (p.arrival > (simIndex) ? `arrives @ ${p.arrival}` : `rem: ${p.remaining} / ${p.burst}`);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  LIVE QUEUE UPDATE
+// ═══════════════════════════════════════════════════════════
+function updateQueueLive(snapshot) {
+  const tbody = document.getElementById('queue-tbody');
+  tbody.innerHTML = snapshot.map(p => `
+    <tr>
+      <td class="pid-cell"><span class="color-dot" style="background:${p.color}"></span>P${p.pid}</td>
+      <td>${p.arrival}</td>
+      <td>${p.burst}</td>
+      <td>${p.remaining}</td>
+      <td>${p.priority}</td>
+      <td><span class="status-badge status-${(p.status||'ready').toLowerCase()}">${p.status||'Ready'}</span></td>
+      <td></td>
+    </tr>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PAUSE / STEP / FINISH
+// ═══════════════════════════════════════════════════════════
+function togglePause() {
+  if (!simRunning) return;
+  simPaused = !simPaused;
+  const btn = document.getElementById('btn-pause');
+  if (simPaused) {
+    clearInterval(simTimer); simTimer = null;
+    btn.textContent = '▶ Resume';
+    btn.className = 'btn btn-primary';
+  } else {
+    btn.textContent = '⏸ Pause';
+    btn.className = 'btn btn-ghost';
+    simTimer = setInterval(simTick, tickDelay());
+  }
+}
+
+function stepOnce() {
+  if (!simRunning) return;
+  if (!simPaused) togglePause();
+  if (simIndex < simSteps.length) {
+    const step = simSteps[simIndex];
+    applyStep(step);
+    simIndex++;
+    if (simIndex >= simSteps.length) finishSim();
+  }
+}
+
+function finishSim() {
+  clearInterval(simTimer); simTimer = null;
+  simRunning = false;
+  simPaused = false;
+
+  document.getElementById('btn-run').style.display = 'inline-flex';
+  document.getElementById('btn-run').textContent = '▶ Re-run';
+  document.getElementById('btn-pause').style.display = 'none';
+  document.getElementById('btn-step').style.display = 'none';
+  document.getElementById('cpu-dot').className = 'card-dot green';
+  document.getElementById('live-running').textContent = 'Done';
+  document.getElementById('live-running').style.color = 'var(--green)';
+
+  // add final time marker
+  const lastStep = simSteps[simSteps.length - 1];
+  if (lastStep) {
+    const timeRow = document.getElementById('gantt-time-row');
+    const marker = document.createElement('span');
+    marker.className = 'time-marker';
+    marker.textContent = lastStep.time + 1;
+    const totalW = ganttBlocks.reduce((s,b) => s+(b.end-b.start)*UNIT, 0);
+    marker.style.left = totalW + 'px';
+    timeRow.appendChild(marker);
+  }
+
+  // compute final metrics from last snapshot
+  const finalSnap = simSteps[simSteps.length - 1].snapshot;
+  lastResult = { procs: finalSnap, gantt: ganttBlocks, algo: selectedAlgo };
+  const avg = computeAverages(finalSnap);
+  document.getElementById('stat-awt').textContent = avg.wt.toFixed(2);
+  document.getElementById('stat-att').textContent = avg.tat.toFixed(2);
+  const cs = simSteps.filter(s => s.isPreemption).length;
+  document.getElementById('stat-cs').textContent = cs;
+  document.getElementById('stat-total').textContent = processes.length;
+
+  renderMetrics(finalSnap, avg);
+  showToast(`✔ ${algoLabel(selectedAlgo)} complete — Avg WT: ${avg.wt.toFixed(2)}, Avg TAT: ${avg.tat.toFixed(2)}`);
+}
+
+function resetLive() {
+  clearInterval(simTimer); simTimer = null;
+  simRunning = false; simPaused = false;
+  simSteps = []; simIndex = 0; ganttBlocks = [];
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RUN SCHEDULER (kept for compare tab — instant mode)
+// ═══════════════════════════════════════════════════════════
+function algoLabel(a) {
+  return {FCFS:'FCFS', SJF:'SJF', SRTN:'SRTN', PRIORITY:'Priority (NP)', PRIORITY_P:'Priority (P)', RR:'Round Robin'}[a];
+}
+
+function computeAverages(procs) {
+  const n = procs.filter(p => p.status === 'Terminated' || p.completionTime != null).length;
+  if (n === 0) return {wt:0, tat:0, rt:0};
+  const done = procs.filter(p => p.completionTime != null);
+  const wt  = done.reduce((s,p) => s + (p.waitingTime  ?? 0), 0) / done.length;
+  const tat = done.reduce((s,p) => s + (p.turnaroundTime ?? 0), 0) / done.length;
+  const rt  = done.reduce((s,p) => s + (p.responseTime  ?? p.firstCPU != null ? (p.responseTime ?? p.firstCPU - p.arrival) : 0), 0) / done.length;
+  return { wt, tat, rt };
+}
+
+// ═══════════════════════════════════════════════════════════
+//  METRICS RENDERER
+// ═══════════════════════════════════════════════════════════
+function renderMetrics(procs, avg) {
+  document.getElementById('metrics-empty').style.display = 'none';
+  document.getElementById('metrics-content').style.display = 'block';
+
+  const minWT  = Math.min(...procs.map(p => p.waitingTime));
+  const minTAT = Math.min(...procs.map(p => p.turnaroundTime));
+  const minRT  = Math.min(...procs.map(p => p.responseTime));
+
+  const tbody = document.getElementById('metrics-tbody');
+  tbody.innerHTML = procs.map(p => `
+    <tr>
+      <td class="pid-cell"><span class="color-dot" style="background:${p.color}"></span>P${p.pid}</td>
+      <td>${p.arrival}</td>
+      <td>${p.burst}</td>
+      <td>${p.completionTime}</td>
+      <td class="${p.waitingTime === minWT ? 'best-val' : ''}">${p.waitingTime}</td>
+      <td class="${p.turnaroundTime === minTAT ? 'best-val' : ''}">${p.turnaroundTime}</td>
+      <td class="${p.responseTime === minRT ? 'best-val' : ''}">${p.responseTime}</td>
+      <td><span class="status-badge status-terminated">Terminated</span></td>
+    </tr>
+  `).join('');
+
+  document.getElementById('avg-wt').textContent  = avg.wt.toFixed(2);
+  document.getElementById('avg-tat').textContent = avg.tat.toFixed(2);
+  document.getElementById('avg-rt').textContent  = avg.rt.toFixed(2);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RESET
+// ═══════════════════════════════════════════════════════════
+function resetAll() {
+  resetLive();
+  processes = [];
+  lastResult = null;
+  colorIndex = 0;
+  renderQueue();
+  resetStats();
+  document.getElementById('stat-total').textContent = '0';
+  document.getElementById('gantt-empty').style.display = 'flex';
+  document.getElementById('gantt-content').style.display = 'none';
+  document.getElementById('metrics-empty').style.display = 'block';
+  document.getElementById('metrics-content').style.display = 'none';
+  document.getElementById('gantt-algo-label').textContent = 'No run yet';
+  document.getElementById('alert-box').innerHTML = '';
+  document.getElementById('live-cpu-card').style.display = 'none';
+  document.getElementById('live-process-bars').innerHTML = '';
+  document.getElementById('btn-run').style.display = 'inline-flex';
+  document.getElementById('btn-run').textContent = '▶ Run Live';
+  document.getElementById('btn-pause').style.display = 'none';
+  document.getElementById('btn-step').style.display = 'none';
+  showToast('Reset complete.');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EXPORT
+// ═══════════════════════════════════════════════════════════
+function exportCSV() {
+  if (!lastResult) return showToast('Run scheduler first.');
+  const { procs, algo } = lastResult;
+  let csv = 'PID,Arrival,Burst,Priority,Completion,Waiting,Turnaround,Response\n';
+  procs.forEach(p => {
+    csv += `P${p.pid},${p.arrival},${p.burst},${p.priority},${p.completionTime},${p.waitingTime},${p.turnaroundTime},${p.responseTime}\n`;
+  });
+  downloadFile(`results_${algo}.csv`, csv, 'text/csv');
+  showToast('CSV exported!');
+}
+
+function exportJSON() {
+  if (!lastResult) return showToast('Run scheduler first.');
+  const { procs, algo, gantt } = lastResult;
+  const data = { algorithm: algo, processes: procs, gantt, averages: computeAverages(procs) };
+  downloadFile(`results_${algo}.json`, JSON.stringify(data, null, 2), 'application/json');
+  showToast('JSON exported!');
+}
+
+function downloadFile(name, content, type) {
+  const blob = new Blob([content], { type });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  COMPARISON
+// ═══════════════════════════════════════════════════════════
+function runComparison() {
+  if (processes.length === 0) {
+    showToast('Add processes first! (Use "Load Sample" or add via Simulator tab)');
+    return;
+  }
+
+  const algos = ['FCFS','SJF','SRTN','PRIORITY','PRIORITY_P','RR'];
+  const quantum = parseInt(document.getElementById('inp-quantum').value) || 3;
+  const results = {};
+
+  algos.forEach(a => {
+    const cloned = cloneProcesses();
+    results[a] = runAlgorithm(a, cloned, quantum);
+    results[a].avg = computeAverages(results[a].procs);
+    results[a].label = a === 'RR' ? `Round Robin (Q=${quantum})` : algoLabel(a);
+  });
+
+  document.getElementById('compare-empty').style.display = 'none';
+  document.getElementById('compare-content').style.display = 'block';
+
+  // Summary cards
+  const bestWT  = Math.min(...algos.map(a => results[a].avg.wt));
+  const bestTAT = Math.min(...algos.map(a => results[a].avg.tat));
+
+  const totalCPU = processes.reduce((s,p) => s + p.burst, 0);
+
+  const sumHtml = algos.map(a => {
+    const r = results[a];
+    const isBest = r.avg.wt === bestWT;
+    const lastEnd = r.gantt.length ? r.gantt[r.gantt.length-1].end : 1;
+    const util = ((totalCPU / lastEnd) * 100).toFixed(1);
+    return `
+      <div class="cmp-item ${isBest ? 'best-algo' : ''}">
+        <div class="cmp-algo">${r.label}${isBest?' ★':''}</div>
+        <div class="cmp-row"><span>Avg WT</span><span class="val">${r.avg.wt.toFixed(2)}</span></div>
+        <div class="cmp-row"><span>Avg TAT</span><span class="val">${r.avg.tat.toFixed(2)}</span></div>
+        <div class="cmp-row"><span>Avg RT</span><span class="val">${r.avg.rt.toFixed(2)}</span></div>
+        <div class="cmp-row"><span>Ctx Switches</span><span class="val">${r.contextSwitches}</span></div>
+        <div class="cmp-row"><span>CPU Util</span><span class="val">${util}%</span></div>
+      </div>
+    `;
+  }).join('');
+  document.getElementById('compare-summary').innerHTML = sumHtml;
+
+  // Mini gantt grids
+  const ganttHtml = algos.map(a => {
+    const r = results[a];
+    const totalTime = r.gantt.length ? r.gantt[r.gantt.length-1].end : 1;
+    const UNIT = Math.max(14, Math.min(40, Math.floor(400 / totalTime)));
+    let blocks = r.gantt.map(g => {
+      const w = (g.end - g.start) * UNIT;
+      if (g.pid === 'IDLE') return `<div class="gantt-block gantt-block-idle" style="width:${w-2}px;height:28px" title="IDLE"><span style="font-size:9px">I</span></div>`;
+      return `<div class="gantt-block" style="width:${w-2}px;height:28px;background:${g.color}" title="P${g.pid}:${g.start}→${g.end}"><span style="font-size:10px">P${g.pid}</span></div>`;
+    }).join('');
+    return `
+      <div class="compare-card">
+        <div class="compare-header">
+          <div class="compare-title">${r.label}</div>
+          <div class="compare-meta">WT:${r.avg.wt.toFixed(1)} TAT:${r.avg.tat.toFixed(1)}</div>
+        </div>
+        <div style="padding:12px;overflow-x:auto">
+          <div style="display:flex;align-items:center;gap:2px;min-width:max-content">${blocks}</div>
+          <div style="position:relative;height:14px;margin-top:2px;min-width:${totalTime*UNIT}px">
+            ${[...new Set(r.gantt.flatMap(g=>[g.start,g.end]))].sort((a,b)=>a-b)
+              .map(t=>`<span style="position:absolute;left:${t*UNIT}px;font-size:8px;color:var(--text3);transform:translateX(-50%)">${t}</span>`).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  document.getElementById('compare-gantt-grid').innerHTML = ganttHtml;
+
+  // Bar chart comparison
+  const maxWT  = Math.max(...algos.map(a => results[a].avg.wt));
+  const maxTAT = Math.max(...algos.map(a => results[a].avg.tat));
+  const colors = { FCFS: '#00d4ff', SJF: '#00e676', SRTN: '#18ffff', PRIORITY: '#ffd740', PRIORITY_P: '#ff9800', RR: '#bb86fc' };
+  document.getElementById('compare-gantt-grid').style.gridTemplateColumns = 'repeat(3, 1fr)';
+
+  let chartHtml = `<div style="margin-bottom:12px;font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em">Average Waiting Time</div>`;
+  algos.forEach(a => {
+    const pct = (results[a].avg.wt / maxWT * 100).toFixed(1);
+    chartHtml += `<div class="bar-row">
+      <div class="bar-label">${results[a].label}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${pct}%;background:${colors[a]}">
+          <span class="bar-val">${results[a].avg.wt.toFixed(2)}</span>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  chartHtml += `<div style="margin:16px 0 12px;font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em">Average Turnaround Time</div>`;
+  algos.forEach(a => {
+    const pct = (results[a].avg.tat / maxTAT * 100).toFixed(1);
+    chartHtml += `<div class="bar-row">
+      <div class="bar-label">${results[a].label}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${pct}%;background:${colors[a]}">
+          <span class="bar-val">${results[a].avg.tat.toFixed(2)}</span>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('compare-chart-wrap').innerHTML = chartHtml;
+  showToast('All 4 algorithms compared!');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  LIFECYCLE ANIMATOR
+// ═══════════════════════════════════════════════════════════
+function renderLifecycle() {
+  if (processes.length === 0) {
+    showToast('Add processes first (or load sample)');
+    return;
+  }
+
+  if (lifecycleTimer) clearInterval(lifecycleTimer);
+
+  // Run FCFS to get a schedule
+  const cloned = cloneProcesses();
+  const result = scheduleFCFS(cloned);
+  const gantt = result.gantt.filter(g => g.pid !== 'IDLE');
+
+  // clear boards
+  ['lc-new-procs','lc-ready-procs','lc-running-procs','lc-waiting-procs','lc-term-procs']
+    .forEach(id => document.getElementById(id).innerHTML = '');
+
+  const lbl = document.getElementById('lc-step-label');
+  const prog = document.getElementById('lc-progress');
+  const progFill = document.getElementById('lc-progress-fill');
+  prog.style.display = 'block';
+
+  // Add all to NEW first
+  setTimeout(() => {
+    processes.forEach(p => {
+      addChip('lc-new-procs', p, 'new');
+    });
+    lbl.textContent = 'Step 1: All processes created (NEW state)';
+  }, 0);
+
+  // Move to READY
+  setTimeout(() => {
+    document.getElementById('lc-new-procs').innerHTML = '';
+    processes.forEach(p => addChip('lc-ready-procs', p, 'ready'));
+    lbl.textContent = 'Step 2: Processes loaded into Ready Queue';
+    progFill.style.width = '25%';
+  }, 1200);
+
+  // Animate each gantt slot
+  gantt.forEach((slot, i) => {
+    setTimeout(() => {
+      const proc = processes.find(p => p.pid === slot.pid);
+      if (!proc) return;
+
+      // Move current from ready to running
+      removeChipFromAll(slot.pid);
+      addChip('lc-running-procs', proc, 'running');
+      lbl.textContent = `Step ${i+3}: P${slot.pid} dispatched to CPU (${slot.start}→${slot.end})`;
+      progFill.style.width = `${25 + (i+1)/(gantt.length+1)*65}%`;
+
+      // After its burst, move to terminated
+      setTimeout(() => {
+        removeChipFromAll(slot.pid);
+        addChip('lc-term-procs', proc, 'terminated');
+        if (i === gantt.length - 1) {
+          lbl.textContent = `All ${processes.length} processes terminated. Simulation complete.`;
+          progFill.style.width = '100%';
+          setTimeout(() => prog.style.display = 'none', 1000);
+        }
+      }, 800);
+    }, 1200 + (i+1)*1600);
+  });
+}
+
+function addChip(containerId, proc, state) {
+  const el = document.getElementById(containerId);
+  const stateColors = {
+    new: 'rgba(187,134,252,0.2)', ready: 'rgba(0,230,118,0.2)',
+    running: 'rgba(0,212,255,0.2)', terminated: 'rgba(90,100,114,0.2)'
+  };
+  const chip = document.createElement('span');
+  chip.className = `process-chip ${state === 'running' ? 'chip-running' : ''}`;
+  chip.id = `chip-${proc.pid}`;
+  chip.style.background = proc.color + '33';
+  chip.style.border = `1px solid ${proc.color}`;
+  chip.style.color = proc.color;
+  chip.textContent = `P${proc.pid}`;
+  el.appendChild(chip);
+}
+
+function removeChipFromAll(pid) {
+  const chip = document.getElementById(`chip-${pid}`);
+  if (chip) chip.remove();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+loadSample();
+selectAlgo('FCFS');
+</script>
+</body>
+</html>

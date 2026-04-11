@@ -10,8 +10,11 @@
     <!-- Sidebar Controls -->
     <aside class="sidebar">
         <div class="logo-container">
-            <div class="logo-box pulse-heartbeat">OS</div>
-            <h1 class="logo-text">Kernel Console <span style="font-size:0.5rem; vertical-align:top; color:var(--accent-primary)">v2.4</span></h1>
+            <div class="logo-box">OS</div>
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+                <h1 class="logo-text">P-SCHED</h1>
+                <span style="font-size:0.6rem; color:var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">Kernel Console v4.0</span>
+            </div>
         </div>
 
         <h2 class="section-title">Configure Process</h2>
@@ -44,6 +47,7 @@
             </div>
         </div>
         <button class="btn btn-primary" id="addProcessBtn">Add Process</button>
+        <button class="btn btn-outline" id="loadSampleBtn" style="margin-top: 0.5rem; border-style: dashed;">Load Sample Data</button>
 
         <h2 class="section-title">Scheduling Logic</h2>
         <div class="algo-grid">
@@ -71,7 +75,7 @@
         </div>
 
         <div style="margin-top: auto; padding-top: 2rem;">
-            <div id="playbackControls" style="display: none; margin-bottom: 1rem; border: 1px solid var(--border); padding: 0.75rem; border-radius: 8px; background: rgba(0,0,0,0.1)">
+            <div id="playbackControls" style="display: none; margin-bottom: 1rem; border: 1px solid var(--border); padding: 0.75rem; border-radius: 8px; background: var(--bg-hover)">
                 <div style="display: flex; gap: 0.4rem;">
                     <button class="btn btn-outline" id="prevBtn" title="Previous Step">⏮</button>
                     <button class="btn btn-primary" id="pauseResumeBtn" style="flex: 1.5;">Pause</button>
@@ -135,6 +139,7 @@
                                         <th>Arr</th>
                                         <th>Burst</th>
                                         <th style="width: 80px;">State</th>
+                                        <th>WT/TAT</th>
                                     </tr>
                                 </thead>
                                 <tbody id="processTableBody"></tbody>

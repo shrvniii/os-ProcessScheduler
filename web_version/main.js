@@ -23,15 +23,21 @@ class Scheduler {
         this.loggedStarted = [];
         this.loggedFinished = [];
         
-        // Sample Data
+        // Starts empty as requested
+    }
+
+    loadSampleData() {
+        this.reset();
         this.addProcess("Chrome", 0, 8, 2, 1);
         this.addProcess("VSCode", 1, 5, 1, 2);
         this.addProcess("Terminal", 2, 12, 3, 2);
         this.addProcess("System", 4, 3, 1, 1);
+        this.addLog("Sample workload loaded.");
+        this.refreshUI();
     }
 
     addProcess(name, arrival, burst, priority, queueLevel) {
-        const colors = ['#10b981', '#f59e0b', '#0ea5e9', '#6366f1', '#f43f5e', '#8b5cf6', '#ec4899', '#06b6d4'];
+        const colors = ['#a0522d', '#d2b48c', '#ff9800', '#bb86fc', '#00e676', '#ffd740', '#ff4d6d', '#555555'];
         const p = {
             pid: this.nextPid++,
             name: name || "P" + (this.nextPid - 1),
@@ -281,7 +287,7 @@ class Scheduler {
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
                         <div class="qn-meta">REM: ${p.rem}ms</div>
-                        <div style="font-size:0.5rem; color:var(--text-dim); font-family:'JetBrains Mono';">${Math.round(progress)}%</div>
+                        <div class="qn-percent">${Math.round(progress)}%</div>
                     </div>
                 `;
                 uiQueue.appendChild(node);
@@ -298,10 +304,10 @@ class Scheduler {
                 lastBlock.style.width = (currentWidth + UNIT) + 'px';
             } else {
                 const block = document.createElement('div');
-                block.className = 'gantt-block';
+                block.className = 'gantt-block' + (isIdle ? ' idle-block' : '');
                 block.dataset.pid = pid;
                 block.style.width = UNIT + 'px';
-                block.style.backgroundColor = isIdle ? 'var(--bg-hover)' : color;
+                if (!isIdle) block.style.backgroundColor = color;
                 block.innerHTML = `<span class="pid" style="font-size:0.7rem">${isIdle ? '' : 'P'+pid}</span>`;
                 ganttLiveRow.appendChild(block);
 
@@ -330,6 +336,7 @@ class Scheduler {
                     <td>${p.arrival}ms</td>
                     <td>${p.burst}ms</td>
                     <td><span class="status-pill status-${p.status.toLowerCase()}">${p.status}</span></td>
+                    <td>${p.wt}/${p.tat}</td>
                 `;
                 tableBody.appendChild(row);
             });
@@ -452,18 +459,18 @@ class Scheduler {
             data: {
                 labels: procs.map(p => p.name),
                 datasets: [
-                    { label: 'Wait Time', data: procs.map(p => p.wt), backgroundColor: '#f59e0b' },
-                    { label: 'Turnaround', data: procs.map(p => p.tat), backgroundColor: '#10b981' }
+                    { label: 'Wait Time', data: procs.map(p => p.wt), backgroundColor: '#d2b48c' },
+                    { label: 'Turnaround', data: procs.map(p => p.tat), backgroundColor: '#a0522d' }
                 ]
             },
             options: { 
                 responsive: true, 
                 maintainAspectRatio: false,
                 scales: { 
-                    y: { beginAtZero: true, grid: { color: '#2d323d' } },
+                    y: { beginAtZero: true, grid: { color: '#cccccc' } },
                     x: { grid: { display: false } }
                 },
-                plugins: { legend: { labels: { color: '#94a3b8' } } }
+                plugins: { legend: { labels: { color: '#555555', font: { family: 'Times New Roman' } } } }
             }
         });
     }
@@ -604,6 +611,8 @@ document.addEventListener('DOMContentLoaded', () => {
         scheduler.addLog("Added Process " + (name || ("P" + (scheduler.nextPid - 1))));
         scheduler.refreshUI();
     };
+
+    document.getElementById('loadSampleBtn').onclick = () => scheduler.loadSampleData();
 
     document.getElementById('runSimulationBtn').onclick = () => scheduler.start();
     document.getElementById('resetBtn').onclick = () => scheduler.reset();
